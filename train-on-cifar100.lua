@@ -16,6 +16,7 @@ opt = lapp[[
     --threads                  (default 4)           number of threads
     --max_epoch                (default 100)         maximum number of iterations
     --type                     (default float)       cuda/float
+    --resume                                         resume learning from learned network
 ]]
 
 -- Set # of threads
@@ -38,7 +39,16 @@ local function cast(t)
 end
 
 -- Define models
-model = require('models/' .. opt.network)
+if not opt.resume then
+    model = require('models/' .. opt.network)
+else
+    print('<cifar100> load trained network, and resume learning')
+    if opt.type == 'cuda' then
+        require 'cunn'
+    end
+    local filename = paths.concat(opt.save, 'cifar100.net')
+    model = torch.load(filename)
+end
 
 print(model)
 
@@ -49,8 +59,8 @@ criterion = nn.CrossEntropyCriterion()
 confusion = optim.ConfusionMatrix(100)
 
 -- Get dataset
-nTrainingPatches = 5000
-nTestingPatches = 1000
+nTrainingPatches = 50000
+nTestingPatches = 10000
 
 print('<cifar100> preparing training data')
 trainData = cifar100.loadTrainSet(nTrainingPatches)
@@ -193,7 +203,7 @@ function test(dataset)
 
     -- Show confusion matrix
     confusion:updateValids()
-    print(('Train accuracy: %6.2f'):format(100.0 * confusion.totalValid))
+    print(('Test accuracy: %6.2f'):format(100.0 * confusion.totalValid))
     confusion:zero()
 end
 
